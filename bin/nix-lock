@@ -1,0 +1,85 @@
+#!/usr/bin/env nix-shell
+#! nix-shell -i "python3 -u" ../shell.nix
+
+import datetime
+import json
+import os
+import urllib.request as req
+import subprocess
+import sys
+import tempfile
+
+import click
+
+
+@click.group()
+def cli():
+    pass
+
+
+@cli.command()
+@click.option("--packages-file", "-p", default="nix-packages.json", type=click.Path(exists=True))
+@click.option("--force", default=False, is_flag=True)
+def update(packages_file, force):
+    click.echo(f"Updating sources in {packages_file}")
+    dirty = False
+    with open(packages_file) as f:
+        versions = json.load(f)
+    try:
+        with open(packages_file + ".lock") as f:
+            lock = json.load(f)
+    except FileNotFoundError:
+        lock = {}
+
+    for i, p in enumerate(versions):
+        n = versions[p]
+        click.secho(f"{i+1}/{len(versions)} [{p}]: Looking for updates... ", fg="white", nl=False)
+        r = req.Request(
+            f"https://api.github.com/repos/{n['owner']}/{n['repo']}/commits?sha={n.get('rev', 'master')}",
+            headers={"Accept": "application/vnd.github.v3+json"},
+        )
+        with req.urlopen(r) as resp:
+            rev = json.load(resp)[0]["sha"]
+
+        if force or rev != lock.get(p, {}).get("meta", {}).get("rev"):
+            click.secho(f"downloading new version...", fg="yellow")
+            url = f"https://github.com/{n['owner']}/{n['repo']}/archive/{rev}.tar.gz"
+            res = subprocess.run(
+                ["nix-prefetch-url", "--unpack", url], stdout=subprocess.PIPE, text=True
+            )
+
+            lock[p] = {
+                "fetcher": "fetchFromGitHub",
+                "args": {
+                    "owner": n["owner"],
+                    "repo": n["repo"],
+                    "rev": rev,
+                    "sha256": res.stdout.strip(),
+                },
+                "meta": {
+                    "updated": datetime.datetime.utcnow()
+                    .replace(microsecond=0, tzinfo=datetime.timezone.utc)
+                    .isoformat(),
+                    "rev": rev,
+                },
+            }
+            dirty = True
+        else:
+            click.secho(f"up-to-date", fg="green")
+
+    if not dirty:
+        return
+
+    with tempfile.NamedTemporaryFile(
+        "w",
+        prefix=os.path.basename(packages_file),
+        dir=os.path.dirname(packages_file),
+        delete=False,
+    ) as f:
+        json.dump(lock, f, indent=4)
+        f.write("\n")
+    os.rename(f.name, packages_file + ".lock")
+
+
+if __name__ == "__main__":
+    sys.exit(cli())
