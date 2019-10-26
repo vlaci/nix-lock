@@ -1,0 +1,6 @@
+crayons
+httpx
+marshmallow
+tomlkit
+pytest
+pytest-runner

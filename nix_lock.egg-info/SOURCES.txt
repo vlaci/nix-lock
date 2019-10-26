@@ -1,0 +1,9 @@
+README.md
+setup.cfg
+setup.py
+nix_lock.egg-info/PKG-INFO
+nix_lock.egg-info/SOURCES.txt
+nix_lock.egg-info/dependency_links.txt
+nix_lock.egg-info/entry_points.txt
+nix_lock.egg-info/requires.txt
+nix_lock.egg-info/top_level.txt

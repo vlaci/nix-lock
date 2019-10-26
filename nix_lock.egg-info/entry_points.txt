@@ -1,0 +1,3 @@
+[console_scripts]
+nix-lock = nix_lock.cli:main
+
