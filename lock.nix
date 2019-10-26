@@ -1,23 +1,24 @@
 { lib
 , pkgs
+, overrides ? {}
 , path }:
 
 
 let
   versions = lib.importJSON path;
-  download = node:
-    if node.fetcher == "fetchTarball" then
-      builtins.fetchTarball node.args
-    else if pkgs ? "${node.fetcher}" then
-      pkgs."${node.fetcher}" node.args
-    else
-      abort "Unknown fetcher '${node.fetcher}'";
-in
-{
+in rec {
   get = name:
     let
       node = versions."${name}";
-    in download node;
+    in
+      if overrides ? "${name}" then
+        overrides."${name}"
+      else if node.fetcher == "fetchTarball" then
+        builtins.fetchTarball node.args
+      else if pkgs ? "${node.fetcher}" then
+        pkgs."${node.fetcher}" node.args
+      else
+        abort "Unknown fetcher '${node.fetcher}'";
 
-  getAll  = map download versions;
+  getAll  = map get (lib.attrNames versions);
 }
