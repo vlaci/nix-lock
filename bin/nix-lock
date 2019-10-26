@@ -4,6 +4,7 @@
 import datetime
 import json
 import os
+from pathlib import Path
 import urllib.request as req
 import subprocess
 import sys
@@ -18,15 +19,17 @@ def cli():
 
 
 @cli.command()
-@click.option("--packages-file", "-p", default="nix-packages.json", type=click.Path(exists=True))
+@click.option("--package-file", "-p", default="derivations.json", type=click.Path(exists=True))
 @click.option("--force", default=False, is_flag=True)
-def update(packages_file, force):
-    click.echo(f"Updating sources in {packages_file}")
+def update(package_file, force):
+    click.echo(f"Updating sources in {package_file}")
+    package_file = Path(package_file)
     dirty = False
-    with open(packages_file) as f:
+    with package_file.open() as f:
         versions = json.load(f)
+    lock_file = package_file.with_suffix(".lock")
     try:
-        with open(packages_file + ".lock") as f:
+        with lock_file.open() as f:
             lock = json.load(f)
     except FileNotFoundError:
         lock = {}
@@ -72,13 +75,13 @@ def update(packages_file, force):
 
     with tempfile.NamedTemporaryFile(
         "w",
-        prefix=os.path.basename(packages_file),
-        dir=os.path.dirname(packages_file),
+        prefix=package_file.name,
+        dir=package_file.parent,
         delete=False,
     ) as f:
         json.dump(lock, f, indent=4)
         f.write("\n")
-    os.rename(f.name, packages_file + ".lock")
+    os.rename(f.name, lock_file)
 
 
 if __name__ == "__main__":
