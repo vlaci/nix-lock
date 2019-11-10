@@ -1,6 +1,8 @@
 crayons
 httpx
 marshmallow
+marshmallow-union
 tomlkit
 pytest
 pytest-runner
+python-language-server

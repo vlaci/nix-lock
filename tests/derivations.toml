@@ -1,0 +1,5 @@
+[srcs]
+doom-emacs = { git = "https://github.com/hlissner/doom-emacs", rev = "develop" }
+"nix-straight.el" = { git = "https://github.com/vlaci/nix-straight.el", rev = "v1.0" }
+org-yt = { git = "https://github.com/TobiasZawada/org-yt" }
+emacs-overlay = { git = "https://github.com/nix-community/emacs-overlay" }
